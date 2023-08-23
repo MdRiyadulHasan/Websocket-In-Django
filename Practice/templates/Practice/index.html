@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>{{ groupname }} Group</h1>
+    <h2 id = "ct"></h2>
+
+    <textarea  id="riyad" cols="80" rows="15">
+        {% for chat in chats %}
+        {{ chat.content}}
+
+        {% endfor %}
+    </textarea><br>
+    <input type="text"  id="r3" size="80"> <br> <br>
+    <input type="button" value="send" id="r2">
+
+    {{ groupname|json_script:"group-name"}}
+    <script>
+        const groupName = JSON.parse(document.getElementById("group-name").textContent)
+        console.log(groupName)
+        // var ws = new WebSocket('ws://127.0.0.1:8000/ws/riyad2/')
+        var ws = new WebSocket(
+            'ws://'
+            + window.location.host
+            +'/ws/mim2/'
+            + groupName
+            + '/'
+        )
+
+        ws.onopen = function(){
+            console.log('websocket connection opened ...')
+            
+        }
+
+        ws.onmessage = function(event) {
+            console.log('Message received from server ..',event.data)
+            const data = JSON.parse(event.data)
+            console.log(data.msg)
+            console.log(data.user)
+            document.querySelector('#riyad').value +=(data.user + " : "+ data.msg + '\n') 
+            
+        }
+
+        ws.onerror = function(event) {
+            console.log('Websocket error occured..',event)
+        }
+        ws.onclose = function(event) {
+            console.log('websocket connection closed ...',event)
+        };
+
+        document.getElementById('r2').onclick = function(event) {
+        const messageInput = document.getElementById('r3');
+        const message1 = messageInput.value
+        ws.send(JSON.stringify({
+            "msg": message1
+        }));
+        messageInput.value = '';
+}
+
+
+
+
+
+
+
+
+        // ws.addEventListener('open', () => {
+        //     console.log('websocket connection opened ...')
+        //     ws.send('Hi, from client to server...')
+
+        // })
+        // ws.addEventListener('message', (event) => {
+        //     console.log('Message received from server ..', event.data)
+        //     document.getElementById("ct").innerText = event.data
+        // })
+
+        // ws.addEventListener('error', (event) => {
+        //     console.log('Error occured..', event)
+        // })
+
+        // ws.addEventListener('close', (event) => {
+        //     console.log('connection closed ..', event)
+        // })
+
+    </script>
+    
+</body>
+</html>
