@@ -1,137 +1,63 @@
-from channels.consumer import SyncConsumer, AsyncConsumer
-from channels.exceptions import StopConsumer
+from channels.generic.websocket import WebsocketConsumer, AsyncWebsocketConsumer, JsonWebsocketConsumer, AsyncJsonWebsocketConsumer
 from time import sleep
 import asyncio
-import json
-from asgiref.sync import async_to_sync
-from chat.models import Group, ChatInfo
-from asgiref.sync import sync_to_async
-from channels.db import database_sync_to_async
 
-class MySyncConsumer(SyncConsumer):
-    def websocket_connect(self, event):
-        print("connected .....", event)
-        async_to_sync (self.channel_layer.group_add)(
-            "programmers", self.channel_name
-        )
-        self.send({
-            'type':'websocket.accept',
-        })
+class MyWebSocketConsumer(WebsocketConsumer):
+    def connect(self):
+        print("Connected ..")
+        self.accept()
 
-    def websocket_receive(self, event):
-        print("receiving riad.....", event['text'])
+    def receive(self, text_data=None, bytes_data=None):
+        print("Received data from client", text_data)
+        for i in range(50):
+            self.send(text_data = str(i))
+            sleep(1)
 
-        async_to_sync (self.channel_layer.group_send)(
-            'programmers', 
-            {
-                'type':'chat.message',
-                'message': event['text']
-            }
-        )
-    def chat_message(self, event):
-        print("Event 55 .. ",event)
-        print('Actual Data .. ', event['message'])
-        self.send({
-            'type':'websocket.send',
-            'text': event['message'],
-        })
+    def disconnect(self, close_code):
+       print("Disconnected ..", close_code)
 
-    def websocket_disconnect(self, event):
-        print("Channel Layer ..", self.channel_layer)
+class MyAsyncWebsocketConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        print("Connected ..")
+        await self.accept()
 
-        print("Channel Name ..", self.channel_name)
+    async def receive(self, text_data=None, bytes_data=None):
+        print("Received data from client", text_data)
+        for i in range(50):
+            await self.send(text_data = str(i))
+            await asyncio.sleep(1)
+        
+    async def disconnect(self, close_code):
+       print("Disconnected ..", close_code)
 
-        async_to_sync (self.channel_layer.group_discard)(
-            "programmers", self.channel_name
-        )
+class MyJsonWebsocketConsumer(JsonWebsocketConsumer):
+    def connect(self):
+        print("Connected .. json websocket consumer..")
+        self.accept()
+    def receive_json(self, content, **kwargs):
+        print("receving data from client", content)
+        print("type", type(content))
 
-        print("disconnected .....", event)
-        raise StopConsumer()
-
-
-# class MyASyncConsumer(AsyncConsumer):
-#     async def websocket_connect(self, event):
-#         print("connected .....", event)
-#         await self.send({
-#             'type':'websocket.accept',
-#         })
-
-#     async def websocket_receive(self, event):
-#         print("receiving .....", event)
-#         print("message", event['text'])
-
-#         for i in range(10):
-#             await self.send({
-#                 'type':'websocket.send',
-#                 'text':json.dumps({"count":i})
-#             })
-#             asyncio.sleep(1)
-            
-#     async def websocket_disconnect(self, event):
-#         print("disconnected .....", event)
-#         raise StopConsumer()
-class MyASyncConsumer(AsyncConsumer):
-    async def websocket_connect(self, event):
-        # groupName1 = self.scope['url_route']['kwargs']['groupname1']
-        self.groupName = self.scope['url_route']['kwargs']['groupname']
-
-        print("group Name Real ",self.groupName ) 
-
-
-
-        await self.channel_layer.group_add(
-            self.groupName, self.channel_name
-        )
-        await self.send({
-            'type':'websocket.accept',
-        })
-   
-    async def websocket_receive(self, event):
-        print("receiving kkk .....", event['text'])
-        data = json.loads(event['text'])
-        data1 = data['msg']
-        print("Tazmim", data1)
-        print("Group Name Riyad ..", self.groupName)
-
-        group =await database_sync_to_async( Group.objects.get)(name = self.groupName)
-
-        print("group Name Riyad vai ", group)
-        print("Authentication ==== ", self.scope['user'])
-        # print("data1 ", data1)
-        if self.scope['user'].is_authenticated:
-            chats =await database_sync_to_async( ChatInfo.objects.create)(group = group, content = data1)
-            data['user'] = self.scope['user'].username
-
-            print("UserName 222", data)
-
-            await self.channel_layer.group_send(
-                self.groupName, 
-                {
-                    'type':'chat.message',
-                    'message': json.dumps(data)
-                }
-            )
-        else:
-            await self.send({
-                'type':'websocket.send',
-                'text':json.dumps({"msg":"Login Required", "user": "unknown"})
+        for i in range(30):
+            self.send_json({
+                "message": str(i),
             })
-    async def chat_message(self, event):
-        print("Event pera .. ",event)
-        print('Actual Data .. real ', event['message'])
-        await self.send({
-            'type':'websocket.send',
-            'text': event['message'],
-        })
+            sleep(1)
+    def disconnect(self, close_code):
+        print("Disconnected .. json websocket consumer", close_code)
 
-    async def websocket_disconnect(self, event):
-        print("Channel Layer ..", self.channel_layer)
+class MyAsyncJsonWebsocketConsumer(AsyncJsonWebsocketConsumer):
+    async def connect(self):
+        print("Connected .. json websocket consumer..")
+        await self.accept()
 
-        print("Channel Name ..", self.channel_name)
+    async def receive_json(self, content, **kwargs):
+        print("receving data from client", content)
+        for i in range(50):
+            await self.send_json({
+                "message": str(i),
+            })
+            await asyncio.sleep(1)
 
-        await self.channel_layer.group_discard(
-            self.groupName, self.channel_name
-        )
-
-        print("disconnected .....", event)
-        raise StopConsumer()
+    async def disconnect(self, close_code):
+        print("Disconnected .. json websocket consumer", close_code)
